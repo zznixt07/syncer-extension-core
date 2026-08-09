@@ -1,5 +1,10 @@
 
-import {decideCorrectionMs as decideCorrection, NUDGE_DURATION_MS, targetPositionMs} from '../sync-math.js';
+import {
+  decideCorrectionMs as decideCorrection,
+  IOS_SAFARI_PLAYING_IGNORE_MS,
+  NUDGE_DURATION_MS,
+  targetPositionMs,
+} from '../sync-math.js';
 import type {PlaybackEnvelopeV2, PlaybackStateName} from '../types.js';
 import type {BrowserAdapterApi, BrowserAdapterInspection, BrowserMediaElement} from './service-adapters.js';
 
@@ -134,6 +139,10 @@ export const createBrowserController = ({transport, adapters, environment = brow
       roomRate: remote.playback.rate,
       canSetRate,
       isLive: Boolean(remote.media?.isLive),
+      // Repeated currentTime/playbackRate writes make some WebKit players
+      // rebuffer. Safari therefore stays untouched for normal sub-second
+      // drift and performs a single seek only after crossing this window.
+      playingIgnoreMs: transport.platform === 'ios' ? IOS_SAFARI_PLAYING_IGNORE_MS : undefined,
     });
     const seek = (positionMs: number) => {
       try {
@@ -143,7 +152,9 @@ export const createBrowserController = ({transport, adapters, environment = brow
       }
     };
     const correction = decide(inspection.canSetRate);
-    if (remote.playback.muted !== undefined) media.muted = remote.playback.muted;
+    if (remote.playback.muted !== undefined && media.muted !== remote.playback.muted) {
+      media.muted = remote.playback.muted;
+    }
     if (correction.action !== 'nudge' && nudgeTimer) {
       clearTimeout(nudgeTimer);
       nudgeTimer = null;
@@ -169,7 +180,8 @@ export const createBrowserController = ({transport, adapters, environment = brow
       }
     } else if (inspection.canSetRate && !remote.media?.isLive) {
       try {
-        media.playbackRate = remote.playback.rate > 0 ? remote.playback.rate : 1;
+        const roomRate = remote.playback.rate > 0 ? remote.playback.rate : 1;
+        if (Math.abs(media.playbackRate - roomRate) > .001) media.playbackRate = roomRate;
       } catch (error) {
         rateControlRejected = true;
         transport.post('serviceStatus', {

@@ -5,9 +5,11 @@ import assert from 'node:assert/strict'
 import {
 	DRIFT_HARD_SEEK_S,
 	DRIFT_IGNORE_S,
+	IOS_SAFARI_PLAYING_IGNORE_MS,
 	MAX_NUDGE_ATTEMPTS,
 	NUDGE_FACTOR,
 	decideCorrection,
+	decideCorrectionMs,
 	targetTimeFor,
 } from '../dist/sync-math.js'
 
@@ -131,6 +133,49 @@ test('a big drift still seeks even when nudging is exhausted', () => {
 test('drift is reported signed, positive when ahead of the host', () => {
 	assert.ok(decide({ currentTime: 100.2 }).drift > 0)
 	assert.ok(decide({ currentTime: 99.8 }).drift < 0)
+})
+
+test('Safari stability window does not disturb normally drifting playback', () => {
+	const decision = decideCorrectionMs({
+		currentPositionMs: 30_600,
+		targetMs: 30_000,
+		state: 'play',
+		roomRate: 1,
+		canSetRate: true,
+		isLive: false,
+		playingIgnoreMs: IOS_SAFARI_PLAYING_IGNORE_MS,
+	})
+
+	assert.equal(decision.action, 'ignore')
+})
+
+test('Safari stability window performs one correction after substantial drift', () => {
+	const decision = decideCorrectionMs({
+		currentPositionMs: 30_000 + IOS_SAFARI_PLAYING_IGNORE_MS + 1,
+		targetMs: 30_000,
+		state: 'play',
+		roomRate: 1,
+		canSetRate: true,
+		isLive: false,
+		playingIgnoreMs: IOS_SAFARI_PLAYING_IGNORE_MS,
+	})
+
+	assert.equal(decision.action, 'seek')
+	assert.equal(decision.positionMs, 30_000)
+})
+
+test('Safari stability window does not relax paused-media positioning', () => {
+	const decision = decideCorrectionMs({
+		currentPositionMs: 30_100,
+		targetMs: 30_000,
+		state: 'pause',
+		roomRate: 1,
+		canSetRate: true,
+		isLive: false,
+		playingIgnoreMs: IOS_SAFARI_PLAYING_IGNORE_MS,
+	})
+
+	assert.equal(decision.action, 'seek')
 })
 
 test('end to end: a guest 200ms behind a playing host gets a speed-up', () => {
