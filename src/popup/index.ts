@@ -19,7 +19,7 @@ export const roomStatus = (role: RoomRole, roomName: string, userCount?: number 
   return userCount == null ? `${label} ${roomName}` : `${label} · ${userCount} connected`;
 };
 export const formatDuration = (durationMs?: number) => {
-  if (!Number.isFinite(durationMs)) return '';
+  if (!Number.isFinite(durationMs) || durationMs! <= 0) return '';
   const total = Math.max(0, Math.round(durationMs! / 1000));
   const hours = Math.floor(total / 3600); const minutes = Math.floor(total % 3600 / 60); const seconds = total % 60;
   return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}` : `${minutes}:${String(seconds).padStart(2, '0')}`;
