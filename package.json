@@ -1,0 +1,31 @@
+{
+  "name": "syncer-extension-core",
+  "version": "0.1.0",
+  "description": "Shared protocol, synchronization, browser media, lifecycle, persistence, and popup primitives for Syncer clients.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./browser": "./dist/browser/index.js",
+    "./popup": "./dist/popup/index.js"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.js",
+    "check": "npm run typecheck && npm test && npm pack --dry-run"
+  },
+  "dependencies": {
+    "socket.io-client": "4.8.3"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  },
+  "engines": {"node": ">=20"},
+  "repository": {"type": "git", "url": "git+https://github.com/zznixt07/syncer-extension-core.git"},
+  "license": "MIT",
+  "sideEffects": false
+}
