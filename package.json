@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "description": "Shared protocol, synchronization, browser media, lifecycle, persistence, and popup primitives for Syncer clients.",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist-cjs/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./browser": "./dist/browser/index.js",
-    "./popup": "./dist/popup/index.js"
+    ".": {"types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist-cjs/index.js"},
+    "./browser": {"types": "./dist/browser/index.d.ts", "import": "./dist/browser/index.js", "require": "./dist-cjs/browser/index.js"},
+    "./popup": {"types": "./dist/popup/index.d.ts", "import": "./dist/popup/index.js", "require": "./dist-cjs/popup/index.js"}
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": ["dist", "dist-cjs", "README.md", "LICENSE"],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "build": "npm run clean && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.mjs",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test test/*.test.js",
