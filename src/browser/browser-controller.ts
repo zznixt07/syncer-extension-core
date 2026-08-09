@@ -33,6 +33,7 @@ export interface BrowserControllerEnvironment {
 }
 
 const MEDIA_EVENTS = ['play', 'pause', 'seeked', 'waiting', 'playing', 'ratechange', 'ended'];
+export const CORRECTIVE_SNAPSHOT_INTERVAL_MS = 60_000;
 
 export const playbackState = (media: BrowserMediaElement): PlaybackStateName =>
   media.ended ? 'ended' : media.readyState < 3 && !media.paused ? 'buffer' : media.paused ? 'pause' : 'play';
@@ -118,7 +119,9 @@ export const createBrowserController = ({transport, adapters, environment = brow
   const setRole = (nextRole: 'host' | 'guest' | null) => {
     role = nextRole;
     if (periodicTimer) clearInterval(periodicTimer);
-    periodicTimer = role === 'host' ? environment.every(5000, () => sendSnapshot(false)) : null;
+    periodicTimer = role === 'host'
+      ? environment.every(CORRECTIVE_SNAPSHOT_INTERVAL_MS, () => sendSnapshot(false))
+      : null;
   };
   const apply = async (remote: PlaybackEnvelopeV2 & {targetPositionMs?: number}) => {
     attach();
