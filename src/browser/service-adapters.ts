@@ -4,6 +4,7 @@ import type {AdapterKind, MediaIdentity} from '../types.js';
 export interface BrowserNode {
   textContent?: string | null;
   getAttribute?(name: string): string | null;
+  getBoundingClientRect?(): {width: number; height: number};
   contentDocument?: BrowserPage['document'] | null;
 }
 
@@ -127,6 +128,19 @@ export const createBrowserAdapterApi = (
   const query = (selector: string) => scope.document.querySelector(selector);
   const content = (selector: string) => nodeValue(query(selector));
   const exists = (selector: string) => Boolean(query(selector));
+  /**
+   * YouTube Music keeps an empty `#error-screen` in the player at all times, so
+   * presence alone would mark every track unavailable. An error the user can
+   * actually see occupies space; one that never renders measures zero.
+   */
+  const showing = (selector: string) => {
+    const element = query(selector);
+    if (!element) return false;
+    const rect = element.getBoundingClientRect?.();
+    // Nothing to measure against, so trust the selector rather than ignore it.
+    if (!rect) return true;
+    return rect.width > 0 || rect.height > 0;
+  };
   const findMedia = () => {
     const media: BrowserMediaElement[] = [];
     const visited = new Set<BrowserPage['document']>();
@@ -155,7 +169,7 @@ export const createBrowserAdapterApi = (
     if (host === 'youtu.be' || hostMatches(host, 'youtube.com') || hostMatches(host, 'youtube-nocookie.com')) {
       const canonicalId = youtubeCanonicalId(href);
       const ad = exists('.ad-showing, .video-ads ytd-ad-slot-renderer, .ytp-ad-player-overlay');
-      const unavailable = exists('ytd-player-error-message-renderer, #error-screen, .ytp-error') || !canonicalId;
+      const unavailable = showing('ytd-player-error-message-renderer, #error-screen, .ytp-error') || !canonicalId;
       const status: BrowserServiceStatus = ad ? 'ad' : unavailable ? 'unavailable' : media ? 'ready' : 'missing-media';
       return {
         adapter: 'youtube',
